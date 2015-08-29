@@ -14,7 +14,7 @@ int TRIGGER = 13;
 
 int setupCount = 0;
 long THRESHOLD = 30;
-int SETUP_SAMPLE = 30;
+int SETUP_SAMPLE = 15;
 int setupValue = -1;
 long diff, lastValue;
 
@@ -22,7 +22,7 @@ bool setupOK = false;
 bool isPlaying = false;
 
 int playCount = 0;
-int MAX_PLAY_COUNT = 10;
+int MAX_PLAY_COUNT = 5;
 int musicID = 0;
 
 
@@ -37,6 +37,8 @@ void setup() {
  pinMode(ECHO, INPUT);
  
  Serial.begin(9600);
+  
+ randomSeed(analogRead(0));
 
  playJazz();
 }
@@ -45,6 +47,10 @@ void setup() {
 void loop() {
   // isThereAnyBodyInThere() 
 
+  // playRock(); playRock(); playRock(); playRock(); playRock();
+  // playJazz(); playJazz(); playJazz(); playJazz(); playJazz();
+  // DONT USE THIS! playBlah(); playBlah(); playBlah(); playBlah(); playBlah();
+  
   int cm = getDistance();
   Serial.print(cm);
   Serial.println(" cm");
@@ -52,15 +58,19 @@ void loop() {
   if (isPlaying) {
     if (playCount <= MAX_PLAY_COUNT) {
       playCount++;
-      playJazz(); // TODO random music every new music cycle 
+      play(); 
     } else {
       isPlaying = false;
       playCount = 0;
+      musicID = random(2); // NEXT MUSIC TO PLAY
     }
+
     return;
   }
 
+
   // TODO take the mean value plz
+  // MOVE TO calibration
   if (setupCount < SETUP_SAMPLE) {
     if (cm > 0) {
       setupCount++;
@@ -79,7 +89,7 @@ void loop() {
       diff = setupValue - cm;
       if (diff < 0)
         diff = diff * -1;
-      if (diff > THRESHOLD) {
+      if (diff > THRESHOLD && cm != 0) {
         Serial.println("* found somebody! let's play!");
 
         // TODO choose random genre to play
@@ -89,36 +99,55 @@ void loop() {
       delay(250);
     }
   }
-
-
-    // playJazz();
-    // playRandom();
-    // playRock();
 }
 
-void playRandom() {
-  Serial.println("# random");
+void play() {
+  if (musicID == 0) {
+    playJazz();  
+  } else {
+    playRock();  
+  }
+}
+
+/* BEWARE DONT USE.. IT HURTS THE ROBOT!
+void playBlah() {
+  Serial.println("# blah");
   int v = 100;
   int pause = 0;
 
-  digitalWrite(IN1, HIGH); digitalWrite(IN2, LOW); // A up
-  digitalWrite(IN3, HIGH); digitalWrite(IN4, LOW); // B down
-  delay(v);
-  digitalWrite(IN3, LOW); digitalWrite(IN4, LOW); // B off
-  
-  digitalWrite(IN1, HIGH); digitalWrite(IN2, HIGH); // A stop
-  digitalWrite(IN3, HIGH); digitalWrite(IN4, HIGH); // B stop
-  //delay(pause); 
-  //checkDistance();
-  
-  digitalWrite(IN3, LOW); digitalWrite(IN4, HIGH); // B up  
-  digitalWrite(IN1, LOW); digitalWrite(IN2, HIGH); // A down
-  delay(v);
-  digitalWrite(IN1, LOW); digitalWrite(IN2, LOW); // A down
-  
-  // digitalWrite(IN1, HIGH); digitalWrite(IN2, HIGH); delay(20); // A stop
-  // digitalWrite(IN3, HIGH); digitalWrite(IN4, HIGH); delay(20); // B stop
+  up('B'); delay(100);
+  down('B'); delay(100);
+  release('B');
 
+  up('A'); delay(100);
+  down('A'); delay(100);
+  up('A'); delay(100);
+  down('A'); delay(100);
+
+  up('B'); delay(100);
+  down('B'); delay(100);
+  up('B'); delay(100);
+  down('B'); delay(100);
+  release('B');
+
+  up('A'); delay(100);
+  down('A'); delay(100);
+}
+*/
+
+void playRock() {
+  Serial.println("# rock");
+  int v = 100;
+  int pause = 0;
+
+  up('A'); delay(100);
+  down('A'); delay(100);
+  up('A'); delay(100);
+  down('A'); delay(100);
+  release('A');
+
+  up('B'); delay(100);
+  down('B'); delay(100);
 }
 
 void playJazz() {
@@ -129,19 +158,52 @@ void playJazz() {
    int vuB = 100;
    int vdB = 100; 
 
-  digitalWrite(IN1, HIGH); digitalWrite(IN2, LOW); delay(vuA); // A up
-  digitalWrite(IN1, HIGH); digitalWrite(IN2, HIGH); delay(20); // A stop
+  up('A'); delay(vuA); // A up
+  hold('A'); delay(20); // A stop
  
-  digitalWrite(IN3, LOW); digitalWrite(IN4, HIGH); delay(vuB); // B up
-  digitalWrite(IN3, HIGH); digitalWrite(IN4, HIGH); delay(20); // B stop
+  up('B'); delay(vuB); // B up
+  hold('B'); delay(20); // B stop
   //checkDistance();
   
-  digitalWrite(IN1, LOW); digitalWrite(IN2, HIGH); delay(vdA); // A down
-  digitalWrite(IN1, HIGH); digitalWrite(IN2, HIGH); delay(20); // A stop
+  down('A'); delay(vdA); // A down
+  hold('A'); delay(20); // A stop
  
-  digitalWrite(IN3, HIGH); digitalWrite(IN4, LOW); delay(vdB); // B down
-  digitalWrite(IN3, HIGH); digitalWrite(IN4, HIGH); delay(20); // B stop
+  down('B'); delay(vdB); // B down
+  hold('B'); delay(20); // B stop
 }
+
+void up(char target) {
+  if ('A' == target) {
+    digitalWrite(IN1, HIGH); digitalWrite(IN2, LOW);
+  } else if ('B' == target) {
+    digitalWrite(IN3, LOW); digitalWrite(IN4, HIGH);
+  }
+}
+
+void down(char target) {
+  if ('A' == target) {
+    digitalWrite(IN1, LOW); digitalWrite(IN2, HIGH);
+  } else if ('B' == target) {
+    digitalWrite(IN3, HIGH); digitalWrite(IN4, LOW);
+  }
+}
+
+void hold(char target) {
+  if ('A' == target) {
+    digitalWrite(IN1, HIGH); digitalWrite(IN2, HIGH); delay(20); // A stop
+  } else if ('B' == target) {
+    digitalWrite(IN3, HIGH); digitalWrite(IN4, HIGH); delay(20); // B stop
+  }
+}
+
+void release(char target) {
+  if ('A' == target) {
+    digitalWrite(IN1, LOW); digitalWrite(IN2, LOW); // A off
+  } else if ('B' == target) {
+    digitalWrite(IN3, LOW); digitalWrite(IN4, LOW); // B off
+  }  
+}
+
 
 /**
  * how far is the audience? (centimeters)
